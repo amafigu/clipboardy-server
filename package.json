@@ -1,0 +1,8 @@
+{
+  "name": "@clipboardy/server",
+  "version": "0.0.1",
+  "description": "A real-time clipboard synchronization server",
+  "main": "server.js",
+  "repository": "https://github.com/lunks/clipboardy-server",
+  "author": "lunks"
+}
