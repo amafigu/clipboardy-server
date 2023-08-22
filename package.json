@@ -4,5 +4,11 @@
   "description": "A real-time clipboard synchronization server",
   "main": "server.js",
   "repository": "https://github.com/lunks/clipboardy-server",
-  "author": "lunks"
+  "author": "lunks",
+  "dependencies": {
+    "@prisma/client": "5.2.0",
+    "express": "^4.18.2",
+    "prisma": "^5.2.0",
+    "ws": "^8.13.0"
+  }
 }
