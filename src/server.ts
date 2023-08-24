@@ -8,17 +8,22 @@ const app = express()
 const server = new HttpServer(app)
 const wss = new WsServer({ server })
 
+enum MessageType {
+  NewTextItem = 'newTextItem',
+  Retrieve = 'retrieve',
+}
+
 interface NewTextItemMessage {
-  type: 'newTextItem'
+  type: MessageType.NewTextItem
   text: string
 }
 
-interface ClientRetrieveMessage {
-  type: 'retrieve'
+interface RetrieveMessage {
+  type: MessageType.Retrieve
   id: number
 }
 
-type ClientMessage = NewTextItemMessage | ClientRetrieveMessage
+type ClientMessage = NewTextItemMessage | RetrieveMessage
 
 async function handleNewTextItem(
   clipboardData: NewTextItemMessage,
@@ -37,7 +42,11 @@ async function handleNewTextItem(
 }
 
 function formatTextItem(item: ClipboardItem): string {
-  return JSON.stringify({ type: 'newTextItem', text: item.text, id: item.id })
+  return JSON.stringify({
+    type: MessageType.NewTextItem,
+    text: item.text,
+    id: item.id,
+  })
 }
 
 function broadcastNewTextItem(item: ClipboardItem): void {
@@ -66,10 +75,10 @@ wss.on('connection', (ws) => {
   ws.on('message', async (message: string) => {
     const clipboardData: ClientMessage = JSON.parse(message)
     switch (clipboardData.type) {
-      case 'newTextItem':
+      case MessageType.NewTextItem:
         await handleNewTextItem(clipboardData)
         break
-      case 'retrieve':
+      case MessageType.Retrieve:
         await handleRetrieve(ws)
         break
     }
