@@ -8,7 +8,7 @@ const app = express()
 const server = new HttpServer(app)
 const wss = new WsServer({ server })
 
-interface ClientNewTextItemMessage {
+interface NewTextItemMessage {
   type: 'newTextItem'
   text: string
 }
@@ -18,36 +18,30 @@ interface ClientRetrieveMessage {
   id: number
 }
 
-type ClientMessage = ClientNewTextItemMessage | ClientRetrieveMessage
-
-interface ServerNewTextItemMessage extends ClientNewTextItemMessage {
-  id: number
-}
+type ClientMessage = NewTextItemMessage | ClientRetrieveMessage
 
 async function handleNewTextItem(
-  clipboardData: ClientNewTextItemMessage,
+  clipboardData: NewTextItemMessage,
 ): Promise<void> {
-  if (clipboardData.text) {
-    const latestItem = await findLatestItem()
-    if (latestItem.text === clipboardData.text) {
-      return
-    }
+  if (!clipboardData.text) return
 
-    const createdItem = await prisma.clipboardItem.create({
-      data: {
-        text: clipboardData.text,
-      },
-    })
-    broadcastNewTextItem(createdItem)
-  }
+  const latestItem = await findLatestItem()
+  if (latestItem.text === clipboardData.text) return
+
+  const createdItem = await prisma.clipboardItem.create({
+    data: {
+      text: clipboardData.text,
+    },
+  })
+  broadcastNewTextItem(createdItem)
 }
 
-function formatTextItem(item: ClipboardItem): ServerNewTextItemMessage {
-  return { type: 'newTextItem', text: item.text, id: item.id }
+function formatTextItem(item: ClipboardItem): string {
+  return JSON.stringify({ type: 'newTextItem', text: item.text, id: item.id })
 }
 
 function broadcastNewTextItem(item: ClipboardItem): void {
-  const message = JSON.stringify(formatTextItem(item))
+  const message = formatTextItem(item)
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message)
@@ -64,7 +58,7 @@ async function findLatestItem(): Promise<ClipboardItem> {
 
 async function handleRetrieve(ws: WebSocket): Promise<void> {
   const latestItem = await findLatestItem()
-  ws.send(JSON.stringify(formatTextItem(latestItem)))
+  ws.send(formatTextItem(latestItem))
 }
 
 wss.on('connection', (ws) => {
