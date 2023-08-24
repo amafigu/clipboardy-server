@@ -20,9 +20,7 @@ interface ClientRetrieveMessage {
 
 type ClientMessage = ClientNewTextItemMessage | ClientRetrieveMessage
 
-interface ServerNewTextItemMessage {
-  type: 'newTextItem'
-  text: string
+interface ServerNewTextItemMessage extends ClientNewTextItemMessage {
   id: number
 }
 
@@ -72,11 +70,9 @@ async function handleRetrieve(ws: WebSocket): Promise<void> {
 wss.on('connection', (ws) => {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   ws.on('message', async (message: string) => {
-    console.log('message')
     const clipboardData: ClientMessage = JSON.parse(message)
     switch (clipboardData.type) {
       case 'newTextItem':
-        console.log('new Item!')
         await handleNewTextItem(clipboardData)
         break
       case 'retrieve':
