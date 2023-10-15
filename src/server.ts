@@ -31,7 +31,7 @@ async function handleNewTextItem(
   if (!clipboardData.text) return
 
   const latestItem = await findLatestItem()
-  if (latestItem.text === clipboardData.text) return
+  if (latestItem?.text === clipboardData.text) return
 
   const createdItem = await prisma.clipboardItem.create({
     data: {
@@ -58,8 +58,8 @@ function broadcastNewTextItem(item: ClipboardItem): void {
   })
 }
 
-async function findLatestItem(): Promise<ClipboardItem> {
-  const latestItem = await prisma.clipboardItem.findFirstOrThrow({
+async function findLatestItem(): Promise<ClipboardItem | null> {
+  const latestItem = await prisma.clipboardItem.findFirst({
     orderBy: { createdAt: 'desc' },
   })
   return latestItem
@@ -67,6 +67,7 @@ async function findLatestItem(): Promise<ClipboardItem> {
 
 async function handleRetrieve(ws: WebSocket): Promise<void> {
   const latestItem = await findLatestItem()
+  if (latestItem == null) return
   ws.send(formatTextItem(latestItem))
 }
 
