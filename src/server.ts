@@ -1,7 +1,7 @@
+import { PrismaClient, type ClipboardItem } from '@prisma/client'
 import express from 'express'
 import { Server as HttpServer } from 'http'
 import WebSocket, { Server as WsServer } from 'ws'
-import { PrismaClient, type ClipboardItem } from '@prisma/client'
 
 const prisma = new PrismaClient()
 const app = express()
@@ -32,7 +32,6 @@ async function handleNewTextItem(
 
   const latestItem = await findLatestItem()
   if (latestItem?.text === clipboardData.text) return
-
   const createdItem = await prisma.clipboardItem.create({
     data: {
       text: clipboardData.text,
@@ -41,16 +40,16 @@ async function handleNewTextItem(
   broadcastNewTextItem(createdItem)
 }
 
-function formatTextItem(item: ClipboardItem): string {
+function formatTextItem(item: ClipboardItem, messageType: MessageType): string {
   return JSON.stringify({
-    type: MessageType.NewTextItem,
+    type: messageType,
     text: item.text,
     id: item.id,
   })
 }
 
 function broadcastNewTextItem(item: ClipboardItem): void {
-  const message = formatTextItem(item)
+  const message = formatTextItem(item, MessageType.NewTextItem)
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message)
@@ -62,22 +61,25 @@ async function findLatestItem(): Promise<ClipboardItem | null> {
   const latestItem = await prisma.clipboardItem.findFirst({
     orderBy: { createdAt: 'desc' },
   })
+
   return latestItem
 }
 
 async function handleRetrieve(ws: WebSocket): Promise<void> {
   const latestItem = await findLatestItem()
   if (latestItem == null) return
-  ws.send(formatTextItem(latestItem))
+
+  ws.send(formatTextItem(latestItem, MessageType.Retrieve))
 }
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   ws.on('message', async (message: string) => {
     const clipboardData: ClientMessage = JSON.parse(message)
     switch (clipboardData.type) {
       case MessageType.NewTextItem:
         await handleNewTextItem(clipboardData)
+
         break
       case MessageType.Retrieve:
         await handleRetrieve(ws)
